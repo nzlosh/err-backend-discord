@@ -1,6 +1,7 @@
 from typing import Any, List
 
-from errbot.backends.base import Person, Message, Room, RoomOccupant, Presence, ONLINE, OFFLINE, AWAY, DND
+from errbot.backends.base import Person, Message, Room, RoomOccupant, \
+    Presence, ONLINE, OFFLINE, AWAY, DND
 from errbot.errBot import ErrBot
 import logging
 import sys
@@ -21,6 +22,7 @@ COLORS = {
     'white': 0xFFFFFF,
     'cyan': 0x00FFFF
 }  # Discord doesn't know its colors
+
 
 class DiscordPerson(discord.User, Person):
 
@@ -109,8 +111,20 @@ class DiscordRoom(Room):
 
 
 class DiscordRoomOccupant(DiscordPerson, RoomOccupant):
-    def __init__(self, username=None, id_=None, discriminator=None, avatar=None, room: DiscordRoom=None):
-        super().__init__(username=username, id_=id_, discriminator=discriminator, avatar=avatar)
+    def __init__(
+        self,
+        username=None,
+        id_=None,
+        discriminator=None,
+        avatar=None,
+        room: DiscordRoom=None
+    ):
+        super().__init__(
+            username=username,
+            id_=id_,
+            discriminator=discriminator,
+            avatar=avatar
+        )
         self._room = room
 
     @property
@@ -120,7 +134,7 @@ class DiscordRoomOccupant(DiscordPerson, RoomOccupant):
     @staticmethod
     def from_user_and_channel(user: discord.User, channel: discord.Channel):
         return DiscordRoomOccupant(username=user.name,
-                                   id_ =user.id,
+                                   id_=user.id,
                                    discriminator=user.discriminator,
                                    avatar=user.avatar,
                                    room=DiscordRoom.from_channel(channel))
@@ -128,7 +142,7 @@ class DiscordRoomOccupant(DiscordPerson, RoomOccupant):
     @staticmethod
     def from_user_and_room(user: discord.User, room: DiscordRoom):
         return DiscordRoomOccupant(username=user.name,
-                                   id_ =user.id,
+                                   id_=user.id,
                                    discriminator=user.discriminator,
                                    avatar=user.avatar,
                                    room=room)
@@ -153,7 +167,10 @@ class DiscordBackend(ErrBot):
         self.rooms_to_join = config.CHATROOM_PRESENCE
 
         if not self.token:
-            log.fatal('You need to set a token entry in the BOT_IDENTITY setting of your configuration.')
+            log.fatal(
+                'You need to set a token entry in the BOT_IDENTITY'
+                ' setting of your configuration.'
+            )
             sys.exit(1)
         self.bot_identifier = None
 
@@ -190,7 +207,11 @@ class DiscordBackend(ErrBot):
     def on_member_update(self, before, after):
         if before.status != after.status:
             person = DiscordPerson.from_user(after)
-            log.debug('Person %s changed status to %s from %s' % (person, after.status, before.status))
+            log.debug('Person {} changed status to {} from {}'.format(
+                person,
+                after.status,
+                before.status
+            ))
             if after.status == discord.Status.online:
                 self.callback_presence(Presence(person, ONLINE))
             elif after.status == discord.Status.offline:
@@ -234,7 +255,11 @@ class DiscordBackend(ErrBot):
             discriminator = None
 
         if room:
-            return DiscordRoomOccupant(username=user, discriminator=discriminator, room=DiscordRoom(room))
+            return DiscordRoomOccupant(
+                username=user,
+                discriminator=discriminator,
+                room=DiscordRoom(room)
+            )
 
         return DiscordPerson(username=user, discriminator=discriminator)
 
@@ -250,9 +275,18 @@ class DiscordBackend(ErrBot):
             if msg.to.channel is None:
                 msg.to.channel = discord.utils.get(self.client.get_all_channels(), name=msg.to.name)
             recipient = msg.to.channel
-        for message in [msg.body[i:i+DISCORD_MESSAGE_SIZE_LIMIT] for i in range(0, len(msg.body), DISCORD_MESSAGE_SIZE_LIMIT)]:
-            asyncio.run_coroutine_threadsafe(self.client.send_typing(recipient), loop=self.client.loop)
-            asyncio.run_coroutine_threadsafe(self.client.send_message(destination=recipient, content=message), loop=self.client.loop)
+
+        for i in range(0, len(msg.body), DISCORD_MESSAGE_SIZE_LIMIT):
+            message = msg.body[i:i+DISCORD_MESSAGE_SIZE_LIMIT]
+
+            asyncio.run_coroutine_threadsafe(
+                self.client.send_typing(recipient),
+                loop=self.client.loop
+            )
+            asyncio.run_coroutine_threadsafe(
+                self.client.send_message(destination=recipient, content=message),
+                loop=self.client.loop
+            )
 
             super().send_message(msg)
 
@@ -263,7 +297,8 @@ class DiscordBackend(ErrBot):
         recipient = discord.utils.get(self.client.get_all_channels(), name=card.to.name)
 
         if card.color:
-            color = COLORS[card.color] if card.color in COLORS else int(card.color.replace('#', '0x'), 16)
+            color = COLORS[card.color] if card.color in COLORS \
+                else int(card.color.replace('#', '0x'), 16)
         else:
             color = None
 
@@ -280,9 +315,14 @@ class DiscordBackend(ErrBot):
             for key, value in card.fields:
                 em.add_field(name=key, value=value, inline=True)
 
-        asyncio.run_coroutine_threadsafe(self.client.send_typing(recipient), loop=self.client.loop)
-        asyncio.run_coroutine_threadsafe(self.client.send_message(destination=recipient, embed=em), loop=self.client.loop)
-
+        asyncio.run_coroutine_threadsafe(
+            self.client.send_typing(recipient),
+            loop=self.client.loop
+        )
+        asyncio.run_coroutine_threadsafe(
+            self.client.send_message(destination=recipient, embed=em),
+            loop=self.client.loop
+        )
 
     def build_reply(self, mess, text=None, private=False, threaded=False):
         log.debug('Threading is %s' % threaded)
@@ -311,7 +351,7 @@ class DiscordBackend(ErrBot):
                 # we want to retrieve any exceptions to make sure that
                 # they don't nag us about it being un-retrieved.
                 gathered.exception()
-            except:
+            except Exception as e:
                 pass
             self.disconnect_callback()
             return True
