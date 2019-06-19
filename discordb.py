@@ -2,14 +2,13 @@ from typing import Any, List
 
 from errbot.backends.base import Person, Message, Room, RoomOccupant, \
     Presence, ONLINE, OFFLINE, AWAY, DND
-from errbot.errBot import ErrBot
+from errbot.core import ErrBot
 import logging
 import sys
 import discord
 import asyncio
 
-# Can't use __name__ because of Yapsy
-log = logging.getLogger('errbot.backends.discord')
+log = logging.getLogger(__name__)
 
 # Discord message size limit.
 DISCORD_MESSAGE_SIZE_LIMIT = 2000
@@ -93,12 +92,12 @@ class DiscordRoom(Room):
         log.error('Not implemented')
         return True
 
-    def __init__(self, name, channel: discord.Channel=None):
+    def __init__(self, name, channel: discord.TextChannel=None):
         self.name = name
         self.channel = channel
 
     @staticmethod
-    def from_channel(channel: discord.Channel):
+    def from_channel(channel: discord.TextChannel):
         if channel.is_private:
             raise ValueError('You cannot build a Room from a private channel')
         return DiscordRoom(channel.name, channel)
@@ -132,7 +131,7 @@ class DiscordRoomOccupant(DiscordPerson, RoomOccupant):
         return self._room
 
     @staticmethod
-    def from_user_and_channel(user: discord.User, channel: discord.Channel):
+    def from_user_and_channel(user: discord.User, channel: discord.TextChannel):
         return DiscordRoomOccupant(username=user.name,
                                    id_=user.id,
                                    discriminator=user.discriminator,
