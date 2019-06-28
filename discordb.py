@@ -99,7 +99,7 @@ class DiscordPerson(Person, DiscordSender, discord.abc.Snowflake):
         if usr is None:
             return None
 
-        return "{}#{usr.discriminator}".format(usr.name, usr.discriminator)
+        return "{}#{}".format(usr.name, usr.discriminator)
 
     @property
     def aclattr(self) -> str:
@@ -539,8 +539,13 @@ class DiscordBackend(ErrBot):
         recipient = card.to
 
         if not isinstance(recipient, DiscordSender):
-            raise RuntimeError("{} doesn't support sending messages. Expected {} but got {}"
-                               .format(recipient, DiscordSender, type(recipient)))
+            raise RuntimeError(
+                "{} doesn't support sending messages. Expected {} but got {}".format(
+                    recipient,
+                    DiscordSender,
+                    type(recipient)
+                )
+            )
 
         if card.color:
             color = COLOURS.get(card.color, int(card.color.replace('#', '0x'), 16))
@@ -561,7 +566,8 @@ class DiscordBackend(ErrBot):
                 em.add_field(name=key, value=value, inline=True)
 
         asyncio.run_coroutine_threadsafe(
-            recipient.send(embed=em), loop=DiscordBackend.client.loop
+            recipient.send(embed=em),
+            loop=DiscordBackend.client.loop
         ).result(5)
 
     def build_reply(self, mess, text=None, private=False, threaded=False):
