@@ -35,7 +35,7 @@ COLOURS = {
 }  # Discord doesn't know its colours
 
 
-class DiscordSender(ABC):
+class DiscordSender(ABC, discord.abc.Snowflake):
     @abstractmethod
     async def send(self, content: str=None, embed: discord.Embed=None):
         raise NotImplementedError
@@ -45,7 +45,7 @@ class DiscordSender(ABC):
         raise NotImplementedError
 
 
-class DiscordPerson(Person, DiscordSender, discord.abc.Snowflake):
+class DiscordPerson(Person, DiscordSender):
 
     @classmethod
     def username_and_discriminator_to_userid(cls, username: str, discriminator: str) -> str:
@@ -115,7 +115,7 @@ class DiscordPerson(Person, DiscordSender, discord.abc.Snowflake):
         return self.fullname
 
 
-class DiscordRoom(Room, DiscordSender, discord.abc.Snowflake):
+class DiscordRoom(Room, DiscordSender):
     """
     DiscordRoom objects can be in two states:
 
@@ -125,7 +125,10 @@ class DiscordRoom(Room, DiscordSender, discord.abc.Snowflake):
 
     @classmethod
     def from_id(cls, channel_id):
+        log.debug("{} Lookup channel_id {}".format(__name__, channel_id))
         channel = DiscordBackend.client.get_channel(channel_id)
+        log.debug("{} Got channel {}".format(__name__, channel))
+
         if channel is None:
             raise ValueError("Channel id:{} doesn't exist!".format(channel_id))
 
@@ -308,6 +311,7 @@ class DiscordRoom(Room, DiscordSender, discord.abc.Snowflake):
         return self._channel_id
 
     def discord_channel(self) -> Optional[Union[discord.abc.GuildChannel, discord.abc.PrivateChannel]]:
+        log.debug("discord_channel() called using self._channel_id={}".format(self._channel_id))
         return DiscordBackend.client.get_channel(self._channel_id)
 
     async def send(self, content: str=None, embed: discord.Embed=None):
@@ -334,7 +338,7 @@ class DiscordRoom(Room, DiscordSender, discord.abc.Snowflake):
         return None not in [other.id, self.id] and other.id == self.id
 
 
-class DiscordCategory(DiscordRoom, Room):
+class DiscordCategory(DiscordRoom):
 
     def create_subchannel(self, name: str) -> DiscordRoom:
         category = self.get_discord_object()
@@ -380,11 +384,13 @@ class DiscordCategory(DiscordRoom, Room):
         raise RuntimeError("Can't invite to categories")
 
 
-class DiscordRoomOccupant(DiscordPerson, RoomOccupant, DiscordSender, discord.abc.Snowflake):
-
+class DiscordRoomOccupant(RoomOccupant, DiscordPerson):
+    """
+    Discord Room Occupant.
+    """
     def __init__(self, user_id: str, channel_id: str):
         super().__init__(user_id)
-
+        log.debug("DiscordRoomOccupant.init(user_id={},channel_id={}".format(user_id, channel_id))
         self._channel = DiscordRoom.from_id(channel_id)
 
     @property
@@ -407,7 +413,6 @@ class DiscordBackend(ErrBot):
     """
     This is the Discord backend for Errbot.
     """
-
     client = None
 
     def __init__(self, config):
@@ -445,12 +450,15 @@ class DiscordBackend(ErrBot):
 
     async def on_message(self, msg: discord.Message):
         err_msg = Message(msg.content)
-
+        log.debug("on_message err_msg='{}'".format(err_msg))
         if isinstance(msg.channel, discord.abc.PrivateChannel):
+            log.debug("Create DiscordPerson with {}".format(msg.author.id))
             err_msg.frm = DiscordPerson(msg.author.id)
             err_msg.to = self.bot_identifier
         else:
+            log.debug("Create DiscordRoom with channel id={}".format(msg.channel.id))
             err_msg.to = DiscordRoom.from_id(msg.channel.id)
+            log.debug("Create DiscordRoomOccupant with author_id={} channel_id={}".format(msg.author.id, msg.channel.id))
             err_msg.frm = DiscordRoomOccupant(msg.author.id, msg.channel.id)
 
         if self.process_message(err_msg):
@@ -518,8 +526,7 @@ class DiscordBackend(ErrBot):
             return DiscordRoom(room_name[1:], guild.id)
 
     def send_message(self, msg: Message):
-        # log.debug('{} -> {}'.format(msg.frm, msg.to))
-
+        log.debug('{} -> {}'.format(msg.frm, msg.to))
         recipient = msg.to
 
         if not isinstance(recipient, DiscordSender):
