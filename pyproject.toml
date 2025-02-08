@@ -1,36 +1,37 @@
 [build-system]
-requires = [
-    "setuptools>=61.0"
-]
 build-backend = "setuptools.build_meta"
-
+requires = [
+    "setuptools>=64.0",
+    "setuptools-scm>=8"
+]
 [project]
-name = "err-backend-discord"
-version = "4.0.1"
-authors = [{ name="Errbot maintainers", email="noreply@errbot.io" }]
+name            = "err-backend-discord"
+
+# Version is generated from git tag using semver format.
+dynamic         = ["version"]
+description     = "Discord backend for Errbot"
+readme          = "README.md"
+requires-python = ">=3.9"
+license         = {text = "GPL-3.0"}
+authors = [
+    {name="Errbot maintainers", email="noreply@errbot.io"}
+]
 keywords = [
     "errbot",
     "discord",
 ]
-description = "Discord backend for Errbot"
-readme = "README.md"
-requires-python = ">=3.8"
-
-license = {text = "GPL-3.0"}
-
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
-
 dependencies = [
     "discord.py==2.0.1",
 ]
 
 [project.urls]
-"Homepage" = "https://err-backend-discord.readthedocs.io"
-"Bug Tracker" = "https://github.com/errbotio/err-backend-discord/issues"
+"Homepage"      = "https://err-backend-discord.readthedocs.io"
+"Bug Tracker"   = "https://github.com/errbotio/err-backend-discord/issues"
 
 [tool.setuptools]
 # available as beta since setuptools version 61.0.0
@@ -38,3 +39,8 @@ include-package-data = true
 
 [tool.black]
 line-length = 100
+
+[tool.setuptools_scm]
+
+[project.entry_points "errbot.backend_plugins"]
+discord = err-backend-discord:DiscordBackend
